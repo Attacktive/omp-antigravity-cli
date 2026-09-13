@@ -130,11 +130,7 @@ function probeCandidates(candidates: string[], whichFn: (name: string) => string
 	return undefined;
 }
 
-function findBinary(
-	env: Record<string, string | undefined>,
-	platform: string,
-	whichFn: (name: string) => string | null
-) {
+function findBinary(env: Record<string, string | undefined>, platform: string, whichFn: (name: string) => string | null) {
 	const override = env.PI_AGY_BIN;
 	if (override) {
 		return override;

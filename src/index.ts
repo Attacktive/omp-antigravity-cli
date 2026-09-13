@@ -150,88 +150,91 @@ export default function antigravity(pi: ExtensionAPI) {
 	// A slash command reads as conversational, so follow-ups continue the previous thread unless `--new` is passed.
 	let lastConversation: string | undefined;
 
-	pi.registerCommand('agy', {
-		description: 'Delegate a task to the Antigravity CLI: /agy [--plan] [--new] [--model <id>] [--resume <id>] <task>, or /agy --stop',
-		handler: async (args, ctx) => {
-			const { model, conversation, fresh, plan, stop, prompt } = parseCommandArgs(args);
+	pi.registerCommand(
+		'agy',
+		{
+			description: 'Delegate a task to the Antigravity CLI: /agy [--plan] [--new] [--model <id>] [--resume <id>] <task>, or /agy --stop',
+			handler: async (args, ctx) => {
+				const { model, conversation, fresh, plan, stop, prompt } = parseCommandArgs(args);
 
-			if (stop) {
-				const stopped = stopActiveRuns();
-				ctx.ui.notify(`agy: stopped ${stopped} run(s)`, 'info');
+				if (stop) {
+					const stopped = stopActiveRuns();
+					ctx.ui.notify(`agy: stopped ${stopped} run(s)`, 'info');
 
-				return;
-			}
-
-			if (!prompt) {
-				ctx.ui.notify('Usage: /agy [--plan] [--new] [--model <id>] [--resume <id>] <task>, or /agy --stop', 'info');
-
-				return;
-			}
-
-			let resumed: string | undefined;
-			if (!fresh) {
-				resumed = conversation ?? lastConversation;
-			}
-
-			const label = resolveCommandLabel(resumed);
-			const trace: string[] = [];
-			const paint = () => {
-				ctx.ui.setWidget('agy', [`${label} · ${truncate(prompt, 72)}`, ...trace], { placement: 'aboveEditor' });
-			};
-
-			paint();
-
-			const controller = new AbortController();
-			activeRuns.add(controller);
-
-			let run: AgyRun;
-			try {
-				run = await executeCommandRun({
-					prompt,
-					cwd: ctx.cwd,
-					model,
-					conversation: resumed,
-					plan,
-					controller,
-					ctx,
-					paint,
-					trace
-				});
-			} finally {
-				activeRuns.delete(controller);
-				ctx.ui.setWidget('agy', undefined);
-			}
-
-			if (run.aborted) {
-				ctx.ui.notify('agy: stopped', 'info');
-
-				return;
-			}
-
-			if (!run.result) {
-				let detail = run.stderr;
-				if (!detail) {
-					detail = `agy exited with code ${run.exitCode} and produced no result event`;
+					return;
 				}
 
-				ctx.ui.notify(`agy failed: ${detail}`, 'info');
+				if (!prompt) {
+					ctx.ui.notify('Usage: /agy [--plan] [--new] [--model <id>] [--resume <id>] <task>, or /agy --stop', 'info');
 
-				return;
+					return;
+				}
+
+				let resumed: string | undefined;
+				if (!fresh) {
+					resumed = conversation ?? lastConversation;
+				}
+
+				const label = resolveCommandLabel(resumed);
+				const trace: string[] = [];
+				const paint = () => {
+					ctx.ui.setWidget('agy', [`${label} · ${truncate(prompt, 72)}`, ...trace], { placement: 'aboveEditor' });
+				};
+
+				paint();
+
+				const controller = new AbortController();
+				activeRuns.add(controller);
+
+				let run: AgyRun;
+				try {
+					run = await executeCommandRun({
+						prompt,
+						cwd: ctx.cwd,
+						model,
+						conversation: resumed,
+						plan,
+						controller,
+						ctx,
+						paint,
+						trace
+					});
+				} finally {
+					activeRuns.delete(controller);
+					ctx.ui.setWidget('agy', undefined);
+				}
+
+				if (run.aborted) {
+					ctx.ui.notify('agy: stopped', 'info');
+
+					return;
+				}
+
+				if (!run.result) {
+					let detail = run.stderr;
+					if (!detail) {
+						detail = `agy exited with code ${run.exitCode} and produced no result event`;
+					}
+
+					ctx.ui.notify(`agy failed: ${detail}`, 'info');
+
+					return;
+				}
+
+				lastConversation = run.result.conversation_id;
+
+				pi.sendMessage(
+					{
+						customType: 'agy',
+						content: formatReport(run, run.result),
+						display: true,
+						attribution: 'user'
+					},
+					{ triggerTurn: false }
+				);
+
+				ctx.ui.notify(`agy: done in ${run.result.duration_seconds.toFixed(1)}s`, 'info');
 			}
-
-			lastConversation = run.result.conversation_id;
-
-			pi.sendMessage(
-				{
-					customType: 'agy',
-					content: formatReport(run, run.result),
-					display: true,
-					attribution: 'user'
-				},
-				{ triggerTurn: false }
-			);
-
-			ctx.ui.notify(`agy: done in ${run.result.duration_seconds.toFixed(1)}s`, 'info');
 		}
-	});
+	);
 }
