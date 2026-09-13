@@ -2,6 +2,8 @@
 
 An unofficial [OMP](https://oh-my-pi.dev) plugin that delegates tasks and slash commands to the Antigravity CLI (`agy`).
 
+![A review summary displayed inside the OMP terminal](assets/agy-review.webp)
+
 > [!NOTE]
 > This plugin is no better than using the official `agy` harness.
 > It does not make Antigravity faster, smarter, or magically enhanced.
@@ -68,6 +70,8 @@ agy: step 3 · 4s · run_command · bun test
 #### Flags
 
 - **Continue previous conversation (default)**: Consecutive `/agy` commands continue the same conversation thread automatically.
+- **Model (default)**: If `--model` is omitted, the plugin lets `agy` choose its configured default model.
+- **Execution mode (default)**: If `--plan` is omitted, the plugin runs `agy` in its normal mode; `--mode plan` is passed only with `--plan`.
 - **`--new`**: Force a new conversation session instead of resuming:
   ```text
   /agy --new Start fresh analysis
