@@ -343,7 +343,7 @@ describe(
 		const resultPayload: AgyResult = {
 			conversation_id: 'conv-123',
 			status: 'SUCCESS',
-			response: 'Completed successfully',
+			response: 'Completed successfully 🚀',
 			duration_seconds: 5.5,
 			num_turns: 2,
 			usage: {
@@ -371,13 +371,17 @@ describe(
 			};
 		};
 
-		const createStream = (chunks: string[]): ReadableStream<Uint8Array> => {
+		const createStream = (chunks: (Uint8Array | string)[]): ReadableStream<Uint8Array> => {
 			const encoder = new TextEncoder();
 
 			return new ReadableStream({
 				start(controller) {
 					for (const chunk of chunks) {
-						controller.enqueue(encoder.encode(chunk));
+						if (typeof chunk === 'string') {
+							controller.enqueue(encoder.encode(chunk));
+						} else {
+							controller.enqueue(chunk);
+						}
 					}
 
 					controller.close();
@@ -415,9 +419,13 @@ describe(
 			'processes one JSON event split across multiple chunks',
 			async () => {
 				const state = createStreamState();
-				const midpoint = Math.floor(resultEventJson.length / 2);
-				const chunk1 = resultEventJson.slice(0, midpoint);
-				const chunk2 = `${resultEventJson.slice(midpoint)}\n`;
+				const bytes = new TextEncoder().encode(`${resultEventJson}\n`);
+				const splitIndex = bytes.findIndex((byte, index) => {
+					return index > 0 && (byte & 0xc0) === 0x80;
+				});
+
+				const chunk1 = bytes.subarray(0, splitIndex);
+				const chunk2 = bytes.subarray(splitIndex);
 				const stream = createStream([chunk1, chunk2]);
 
 				await consumeStdout(stream, state);
@@ -431,9 +439,13 @@ describe(
 			'processes one JSON event split across multiple chunks without a trailing newline',
 			async () => {
 				const state = createStreamState();
-				const midpoint = Math.floor(resultEventJson.length / 2);
-				const chunk1 = resultEventJson.slice(0, midpoint);
-				const chunk2 = resultEventJson.slice(midpoint);
+				const bytes = new TextEncoder().encode(resultEventJson);
+				const splitIndex = bytes.findIndex((byte, index) => {
+					return index > 0 && (byte & 0xc0) === 0x80;
+				});
+
+				const chunk1 = bytes.subarray(0, splitIndex);
+				const chunk2 = bytes.subarray(splitIndex);
 				const stream = createStream([chunk1, chunk2]);
 
 				await consumeStdout(stream, state);
