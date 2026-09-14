@@ -1,6 +1,6 @@
 {
 	"name": "omp-antigravity-cli",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "An unofficial OMP plugin that delegates tasks and slash commands to the Antigravity CLI (agy)",
 	"license": "MIT",
 	"type": "module",
