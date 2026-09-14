@@ -371,6 +371,13 @@ async function consumeStdout(stdout: ReadableStream<Uint8Array>, state: EventStr
 			handleEvent(line, state);
 		}
 	}
+
+	buffer += decoder.decode();
+
+	const remaining = buffer.trim();
+	if (remaining.length > 0) {
+		handleEvent(remaining, state);
+	}
 }
 
 /** Spawns `agy` in print mode and folds its NDJSON event stream into a single result. */
@@ -434,11 +441,13 @@ export type {
 	AgyToolInfo,
 	AgyUsage,
 	BinaryResolutionOptions,
+	EventStreamState,
 	ParsedCommand
 };
 
 export {
 	DEFAULT_TIMEOUT_SECONDS,
+	consumeStdout,
 	formatHeader,
 	formatReport,
 	formatStep,

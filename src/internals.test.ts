@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgyResult, AgyRun, AgyStep, AgyToolInfo } from './internals.ts';
+import type { AgyResult, AgyRun, AgyStep, AgyToolInfo, EventStreamState } from './internals.ts';
 import {
 	DEFAULT_TIMEOUT_SECONDS,
+	consumeStdout,
 	formatHeader,
 	formatReport,
 	formatStep,
@@ -335,3 +336,112 @@ describe(
 		);
 	}
 );
+
+describe(
+	'consumeStdout',
+	() => {
+		const resultPayload: AgyResult = {
+			conversation_id: 'conv-123',
+			status: 'SUCCESS',
+			response: 'Completed successfully',
+			duration_seconds: 5.5,
+			num_turns: 2,
+			usage: {
+				input_tokens: 10,
+				output_tokens: 20,
+				thinking_tokens: 5,
+				cache_read_tokens: 0,
+				total_tokens: 35
+			}
+		};
+
+		const resultEventJson = JSON.stringify({
+			event: 'result',
+			result: resultPayload
+		});
+
+		const createStreamState = (): EventStreamState => {
+			return {
+				startedAt: Date.now(),
+				options: {
+					prompt: 'test prompt',
+					cwd: '/tmp'
+				},
+				steps: 0
+			};
+		};
+
+		const createStream = (chunks: string[]): ReadableStream<Uint8Array> => {
+			const encoder = new TextEncoder();
+
+			return new ReadableStream({
+				start(controller) {
+					for (const chunk of chunks) {
+						controller.enqueue(encoder.encode(chunk));
+					}
+
+					controller.close();
+				}
+			});
+		};
+
+		test(
+			'processes final result event with a trailing newline',
+			async () => {
+				const state = createStreamState();
+				const stream = createStream([`${resultEventJson}\n`]);
+
+				await consumeStdout(stream, state);
+
+				expect(state.result)
+					.toEqual(resultPayload);
+			}
+		);
+
+		test(
+			'processes final result event without a trailing newline',
+			async () => {
+				const state = createStreamState();
+				const stream = createStream([resultEventJson]);
+
+				await consumeStdout(stream, state);
+
+				expect(state.result)
+					.toEqual(resultPayload);
+			}
+		);
+
+		test(
+			'processes one JSON event split across multiple chunks',
+			async () => {
+				const state = createStreamState();
+				const midpoint = Math.floor(resultEventJson.length / 2);
+				const chunk1 = resultEventJson.slice(0, midpoint);
+				const chunk2 = `${resultEventJson.slice(midpoint)}\n`;
+				const stream = createStream([chunk1, chunk2]);
+
+				await consumeStdout(stream, state);
+
+				expect(state.result)
+					.toEqual(resultPayload);
+			}
+		);
+
+		test(
+			'processes one JSON event split across multiple chunks without a trailing newline',
+			async () => {
+				const state = createStreamState();
+				const midpoint = Math.floor(resultEventJson.length / 2);
+				const chunk1 = resultEventJson.slice(0, midpoint);
+				const chunk2 = resultEventJson.slice(midpoint);
+				const stream = createStream([chunk1, chunk2]);
+
+				await consumeStdout(stream, state);
+
+				expect(state.result)
+					.toEqual(resultPayload);
+			}
+		);
+	}
+);
+
