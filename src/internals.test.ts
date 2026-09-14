@@ -421,6 +421,10 @@ describe(
 				const state = createStreamState();
 				const bytes = new TextEncoder().encode(`${resultEventJson}\n`);
 				const splitIndex = bytes.findIndex((byte, index) => index > 0 && (byte & 0xc0) === 0x80);
+
+				expect(splitIndex)
+					.toBeGreaterThan(0);
+
 				const chunk1 = bytes.subarray(0, splitIndex);
 				const chunk2 = bytes.subarray(splitIndex);
 				const stream = createStream([chunk1, chunk2]);
@@ -438,6 +442,10 @@ describe(
 				const state = createStreamState();
 				const bytes = new TextEncoder().encode(resultEventJson);
 				const splitIndex = bytes.findIndex((byte, index) => index > 0 && (byte & 0xc0) === 0x80);
+
+				expect(splitIndex)
+					.toBeGreaterThan(0);
+
 				const chunk1 = bytes.subarray(0, splitIndex);
 				const chunk2 = bytes.subarray(splitIndex);
 				const stream = createStream([chunk1, chunk2]);
