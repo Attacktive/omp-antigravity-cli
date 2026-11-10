@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ToolDefinition } from '@oh-my-pi/pi-coding-agent';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { z } from 'zod';
 import antigravity from './index.ts';
 
@@ -88,6 +88,41 @@ describe(
 
 				expect(invalid.success)
 					.toBe(false);
+			}
+		);
+
+		test(
+			'runs the agy tool from the invoking worktree',
+			async () => {
+				const mock = createMockExtensionAPI();
+				antigravity(mock.api);
+
+				const tool = mock.getTool('agy');
+				const worktreeCwd = '/worktrees/documentation';
+				const spawn = spyOn(Bun, 'spawn')
+					.mockImplementation(() => ({
+						stdout: new Blob().stream(),
+						stderr: new Blob().stream(),
+						exited: Promise.resolve(0)
+					}) as never);
+
+				try {
+					await tool?.execute(
+						'tool-call-1',
+						{ prompt: 'Inspect the current worktree' },
+						undefined,
+						undefined,
+						{ cwd: worktreeCwd } as never
+					);
+
+					expect(spawn)
+						.toHaveBeenCalledWith(
+							expect.arrayContaining(['--add-dir', worktreeCwd]),
+							expect.objectContaining({ cwd: worktreeCwd })
+						);
+				} finally {
+					spawn.mockRestore();
+				}
 			}
 		);
 

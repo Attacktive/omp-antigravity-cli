@@ -98,7 +98,7 @@ export default function antigravity(pi: ExtensionAPI) {
 				.optional()
 				.describe('Run in plan mode: analysis only, no edits.')
 		}),
-		async execute(_id, rawParams, signal, onUpdate) {
+		async execute(_id, rawParams, signal, onUpdate, ctx) {
 			if (signal?.aborted) {
 				return { content: [{ type: 'text' as const, text: 'Cancelled' }] };
 			}
@@ -107,7 +107,7 @@ export default function antigravity(pi: ExtensionAPI) {
 
 			const run = await runAgy({
 				prompt: params.prompt,
-				cwd: process.cwd(),
+				cwd: ctx.cwd,
 				model: params.model,
 				conversation: params.conversation,
 				plan: params.plan,
