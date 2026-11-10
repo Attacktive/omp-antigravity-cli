@@ -10,6 +10,10 @@ An unofficial [OMP](https://oh-my-pi.dev) plugin that delegates tasks and slash 
 > It delegates directly to the underlying `agy` command-line executable.
 > This plugin is built for developers who dislike using the official `agy` harness and prefer staying inside their OMP environment without switching tools.
 
+> [!WARNING]
+> Using this plugin may violate the applicable terms of service, even though it delegates to the official Antigravity CLI.
+> You are responsible for reviewing the applicable terms and determining whether your use complies with them.
+
 ## Requirements
 
 - The Antigravity CLI (`agy`) installed and accessible on `PATH` (or pointed to via `PI_AGY_BIN`).
